@@ -155,7 +155,7 @@ data "template_cloudinit_config" "jump" {
 }
 
 module "jump" {
-  source            = "./modules/azurerm_vm"
+  source = "./modules/azurerm_vm"
 
   count             = var.create_jump_vm ? 1 : 0
   name              = "${var.prefix}-jump"
@@ -194,7 +194,7 @@ data "template_cloudinit_config" "nfs" {
 }
 
 module "nfs" {
-  source                         = "./modules/azurerm_vm"
+  source = "./modules/azurerm_vm"
 
   count                          = var.storage_type == "standard" ? 1 : 0
   name                           = "${var.prefix}-nfs"
@@ -279,7 +279,7 @@ module "aks" {
   aks_cluster_ssh_public_key               = file(var.ssh_public_key)
   aks_vnet_subnet_id                       = module.vnet.vnet_subnets[0] # aks_subnet
   kubernetes_version                       = var.kubernetes_version
-  aks_cluster_endpoint_public_access_cidrs = local.cluster_endpoint_public_access_cidrs
+  aks_cluster_endpoint_public_access_cidrs = var.create_jump_public_ip && var.create_jump_vm ? setunion(toset(["${module.jump[0].public_ip_address}/32"]), local.cluster_endpoint_public_access_cidrs) : local.cluster_endpoint_public_access_cidrs
   aks_availability_zones                   = var.default_nodepool_availability_zones
   aks_oms_enabled                          = var.create_aks_azure_monitor
   aks_log_analytics_workspace_id           = var.create_aks_azure_monitor ? azurerm_log_analytics_workspace.viya4[0].id : null
@@ -360,8 +360,8 @@ module "postgresql" {
 }
 
 module "netapp" {
-  source        = "./modules/azurerm_netapp"
-  count                = var.storage_type == "ha" ? 1 : 0
+  source = "./modules/azurerm_netapp"
+  count  = var.storage_type == "ha" ? 1 : 0
 
   prefix                = var.prefix
   resource_group_name   = azurerm_resource_group.azure_rg.name
@@ -407,5 +407,5 @@ outdated: ${lookup(data.external.iac_tooling_version.result, "terraform_outdated
 EOT
   }
 
-  depends_on = [ module.aks ]
+  depends_on = [module.aks]
 }
